@@ -19,7 +19,8 @@ import
   json,
   tables,
   typetraits,
-  logging
+  logging,
+  macros
 from uri import
   encodeQuery
 
@@ -34,9 +35,6 @@ const
   BASE_RSS      = BASE & "rss/"
   BASE_SEARCH   = BASE & "search/"
 
-var consoleLog = newConsoleLogger(fmtStr="[$datetime] - $levelname - ", levelThreshold=lvlDebug)
-addHandler(consoleLog)
-
 type
   Qb* = object
     cookie: string
@@ -45,9 +43,126 @@ type
     username: string
     password: string
     referer: string
+  
+  Preferences* = object
+    locale: string
+    create_subfolder_enabled: bool
+    start_paused_enabled: bool
+    auto_delete_mode: int
+    preallocate_all: bool
+    incomplete_files_ext: bool
+    auto_tmm_enabled: bool
+    torrent_changed_tmm_enabled: bool
+    save_path_changed_tmm_enabled: bool
+    category_changed_tmm_enabled: bool
+    save_path: string
+    temp_path_enabled: bool
+    temp_path: string
+    scan_dirs: seq[string]
+    export_dir: string
+    export_dir_fin: string
+    mail_notification_enabled: bool
+    mail_notification_sender: string
+    mail_notification_email: string
+    mail_notification_smtp: string
+    mail_notification_ssl_enabled: bool
+    mail_notification_auth_enabled: bool
+    mail_notification_username: string
+    mail_notification_password: string
+    autorun_enabled: bool
+    autorun_program: string
+    queueing_enabled: bool
+    max_active_downloads: int
+    max_active_torrents: int
+    max_active_uploads: int
+    dont_count_slow_torrents: bool
+    slow_torrent_dl_rate_threshold: int
+    slow_torrent_ul_rate_threshold: int
+    slow_torrent_inactive_timer: int
+    max_ratio_enabled: bool
+    max_ratio: float
+    max_ratio_act: bool
+    listen_port: int
+    upnp: bool
+    random_port: bool
+    dl_limit: int
+    up_limit: int
+    max_connec: int
+    max_connec_per_torrent: int
+    max_uploads: int
+    max_uploads_per_torrent: int
+    stop_tracker_timeout: int
+    piece_extent_affinity: bool
+    enable_utp: bool
+    limit_utp_rate: bool
+    limit_tcp_overhead: bool
+    limit_lan_peers: bool
+    alt_dl_limit: int
+    alt_up_limit: int
+    scheduler_enabled: bool
+    schedule_from_hour: int
+    schedule_from_min: int
+    schedule_to_hour: int
+    schedule_to_min: int
+    scheduler_days: int
+    dht: bool
+    dhtSameAsBT: bool
+    dht_port: int
+    pex: bool
+    lsd: bool
+    encryption: int
+    anonymous_mode: bool
+    proxy_type: int
+    proxy_ip: string
+    proxy_port: int
+    proxy_peer_connections: bool
+    force_proxy: bool
+    proxy_auth_enabled: bool
+    proxy_username: string
+    proxy_password: string
+    ip_filter_enabled: bool
+    ip_filter_path: string
+    ip_filter_trackers: bool
+    web_ui_domain_list: string
+    web_ui_address: string
+    web_ui_port: int
+    web_ui_upnp: bool
+    web_ui_username: string
+    web_ui_password: string
+    web_ui_csrf_protection_enabled: bool
+    web_ui_clickjacking_protection_enabled: bool
+    web_ui_secure_cookie_enabled: bool
+    web_ui_max_auth_fail_count: int
+    web_ui_ban_duration: int
+    bypass_local_auth: bool
+    bypass_auth_subnet_whitelist_enabled: bool
+    bypass_auth_subnet_whitelist: string
+    alternative_webui_enabled: bool
+    alternative_webui_path: string
+    use_https: bool
+    ssl_key: string
+    ssl_cert: string
+    dyndns_enabled: bool
+    dyndns_service: int
+    dyndns_username: string
+    dyndns_password: string
+    dyndns_domain: string
+    rss_refresh_interval: int
+    rss_max_articles_per_feed: int
+    rss_processing_enabled: bool
+    rss_auto_downloading_enabled: bool
 
   HttpHeaders* = ref object
     table*: TableRef[string, seq[string]]
+
+macro getFields(obj: typed): seq[string] =
+  var fields: seq[string]
+  for field in obj.getImpl[2][2]:
+    fields.add $field[0]
+  newLit fields
+
+var consoleLog = newConsoleLogger(fmtStr="[$datetime] - $levelname - ", levelThreshold=lvlDebug)
+addHandler(consoleLog)
 
 proc initQb*(url:string, username:string, password:string): Qb = 
   ## Initializes a Session. 
@@ -255,7 +370,8 @@ proc setGlobalUploadLimit*(self: Qb, limit:int = 0): JsonNode =
   result = %*{"setglobaluploadlimit": res}
   debug(result)
 
-proc getTorrents*(self: Qb, filter="all", category="", sort="", reverse=false, limit=0, offset=0, hashes=""): JsonNode =
+proc getTorrents*(self: Qb, filter="all", category="", sort="", reverse=false, limit=0, offset=0, hashes:seq[string]): JsonNode =
+  ## Gets a list of Torrents
   var querystring = "filter=" & filter
   if category.len != 0:
     querystring = querystring & "&category=" & category
@@ -268,7 +384,7 @@ proc getTorrents*(self: Qb, filter="all", category="", sort="", reverse=false, l
   if offset > 0:
     querystring = querystring & "&offset=" & intToStr(offset)
   if hashes.len > 0:
-    querystring = querystring & "&hashes=" & (hashes)
+    querystring = querystring & "&hashes=" & hashesToStr(hashes)
 
   querystring = "info?" & queryString 
   result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, queryString)
@@ -395,6 +511,29 @@ proc torrentsReannounce*(self: Qb, hashes:seq[string]): JsonNode =
     result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, queryString)
   debug(result)
 
+proc banPeers*(self: Qb, peers:seq[string]): JsonNode =
+  var h:string
+  if peers.len == 0:
+      result = %*{"error": "No peers provided"}
+  else:
+    h = hashesToStr(peers)
+    var querystring = "banPeers?beers=" & h 
+    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, queryString)
+  debug(result)
+
+proc deleteTorrents*(self: Qb, hashes:seq[string], delFiles = false): JsonNode =
+  var h:string
+  var querystring:string
+  if hashes.len == 0:
+      result = %*{"error": "No hashes provided"}
+  else:
+    h = hashesToStr(hashes)
+    querystring = "delete?hashes=" & h 
+    if delFiles:
+      querystring &= "&deleteFiles=true"
+    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, queryString)
+  debug(result)
+
 
 when isMainModule:
   var conn = initQb("http://192.168.42.167:8080", "admin", "adminadmin")
@@ -402,46 +541,3 @@ when isMainModule:
   assert conn.connected == true
   discard conn.logout()
   assert conn.connected == false
-
-## TODOS
-## -----
-## ::
-##  proc postPreferences
-##  proc banPeers
-##  proc getTorrents, hashes
-##  proc addTorrent
-##  proc addTrackerToTorrent
-##  proc editTracker
-##  proc removeTrackerFromTorrent
-##  proc adPeersToTorrent
-##  proc torrentsDecreasePriority
-##  proc torrentsMaximizePriority
-##  proc torrentsMinimalPriority
-##  proc torrentFilePriorities
-##  proc getTorrentDownloadLimit
-##  proc setTorrentDownloadLimit
-##  proc setTorrentShareLimit
-##  proc getTorrentUploadLimit
-##  proc setTorrentUploadLimit
-##  proc setTorrentLocation
-##  proc setTorrentName
-##  proc setTorrentCategory
-##  proc getCategories
-##  proc newCategory
-##  proc editCategory
-##  proc removeCategories
-##  proc addTorrentTags
-##  proc deleteTorrentTags
-##  proc getTags
-##  proc newTag
-##  proc deleteTags
-##  proc setAutomaticTorrentManagement
-##  proc toggleSequentialDownload
-##  proc setFirstLastPriority
-##  proc setTorrentForceStart
-##  proc setTorrentSupperSeeding
-##  proc renameFile
-##  ALL RSS methods
-##  ALL search methods
-##  Renaming the procedures consequently
-## 

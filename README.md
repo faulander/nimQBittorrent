@@ -9,6 +9,7 @@ if conn.connected:
   for torrent in torrents:
     echo getTorrentFiles(torrent["hash"])
 ```
+
 ## **proc** initQb
 
 Initializes a Session.
@@ -160,10 +161,11 @@ proc setGlobalUploadLimit(self: Qb; limit: int = 0): JsonNode {.raises: [KeyErro
 
 ## **proc** getTorrents
 
+Gets a list of Torrents
 
 ```nim
 proc getTorrents(self: Qb; filter = "all"; category = ""; sort = ""; reverse = false;
- limit = 0; offset = 0; hashes = ""): JsonNode {.raises: [KeyError, Exception, ValueError, OSError, HttpRequestError, SslError, IOError, Defect, TimeoutError, ProtocolError, JsonParsingError], tags: [RootEffect, ReadIOEffect, WriteIOEffect, TimeEffect].}
+ limit = 0; offset = 0; hashes: seq[string]): JsonNode {.raises: [KeyError, Exception, ValueError, OSError, HttpRequestError, SslError, IOError, Defect, TimeoutError, ProtocolError, JsonParsingError], tags: [RootEffect, ReadIOEffect, WriteIOEffect, TimeEffect].}
 ```
 
 ## **proc** getTorrentProperties
@@ -265,4 +267,19 @@ Resumes the download/upload of torrents with the provided hashes. Requires knowi
 
 ```nim
 proc torrentsReannounce(self: Qb; hashes: seq[string]): JsonNode {.raises: [KeyError, Exception, ValueError, OSError, HttpRequestError, SslError, IOError, Defect, TimeoutError, ProtocolError, JsonParsingError], tags: [RootEffect, ReadIOEffect, WriteIOEffect, TimeEffect].}
+```
+
+## **proc** banPeers
+
+
+```nim
+proc banPeers(self: Qb; peers: seq[string]): JsonNode {.raises: [KeyError, Exception, ValueError, OSError, HttpRequestError, SslError, IOError, Defect, TimeoutError, ProtocolError, JsonParsingError], tags: [RootEffect, ReadIOEffect, WriteIOEffect, TimeEffect].}
+```
+
+## **proc** deleteTorrents
+
+
+```nim
+proc deleteTorrents(self: Qb; hashes: seq[string]; delFiles = false): JsonNode {.raises: [
+ KeyError, Exception, ValueError, OSError, HttpRequestError, SslError, IOError, Defect, TimeoutError, ProtocolError, JsonParsingError], tags: [RootEffect, ReadIOEffect, WriteIOEffect, TimeEffect].}
 ```
