@@ -1,8 +1,8 @@
-# nimQt - a wrapper for the QBittorrent Web-API
+# nimQBittorrent - a wrapper for the QBittorrent Web-API
 
 ## QUICK EXAMPLE
 ```nim
-import nimqt
+import nimQBittorrent
 let connection = initQb("http://127.0.0.1:8080", "admin", "adminadmin")
 conn.login()
 if conn.connected:
