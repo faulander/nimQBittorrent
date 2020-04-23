@@ -197,15 +197,10 @@ template getData(): untyped =
 proc getDataFromApi(cookie: string, url:string, base:string, meth:string, querystring = "", postorget = HttpGet): JsonNode =  
   getData()
   if response.status == "200 OK":
-    result = %*{meth: response.body}
-  else:
-    result = %*{"error": "Method " & meth & " failed."}
-
-proc getDataFromApiJSON(cookie: string, url:string, base:string, meth:string, querystring = "", postorget = HttpGet): JsonNode 
- =  
-  getData()
-  if response.status == "200 OK":
-    result = parseJson(response.body)
+    try: 
+      result = parseJson(response.body)
+    except:
+      result = %*{meth: response.body}
   else:
     result = %*{"error": "Method " & meth & " failed."}
 
@@ -260,13 +255,13 @@ proc getWebAPIVersion*(self: Qb): JsonNode =
  
 proc getBuildInfo*(self: Qb): JsonNode = 
   ## Returns a JSON of the build information of QBittorrents libraries
-  result = getDataFromApiJSON(self.cookie, self.url, BASE_APP, "buildInfo")
+  result = getDataFromApi(self.cookie, self.url, BASE_APP, "buildInfo")
   debug (result)
 
 proc getPreferences*(self: Qb): JsonNode = 
   ## Returns all preferences of the QBittorrent Instance.
   #TODO Replace choice fields
-  result = getDataFromApiJSON(self.cookie, self.url, BASE_APP, "preferences")
+  result = getDataFromApi(self.cookie, self.url, BASE_APP, "preferences")
   debug (result)
 
 proc getMainLog*(self: Qb, normal = false, info = false, warning = true, critical = true, last_known_id = -1): JsonNode =
@@ -282,14 +277,13 @@ proc getMainLog*(self: Qb, normal = false, info = false, warning = true, critica
                     })
   querystring = "?" & queryString 
   #debug(querystring)
-  result = getDataFromApiJSON(self.cookie, self.url, BASE_LOG, "main", queryString)
+  result = getDataFromApi(self.cookie, self.url, BASE_LOG, "main", queryString)
   debug (result)
 
 proc getPeerLog*(self: Qb, last_known_id = -1): JsonNode =
   ## Get's the peer logs from the current Qt instance. Timeframe can be set by filling the `last_known_id` with an integer field different than -1.
-  #TODO Replace choice fields
   var queryString = "?last_known_id="  & intToStr(last_known_id)
-  result = getDataFromApiJSON(self.cookie, self.url, BASE_LOG, "peers", queryString)
+  result = getDataFromApi(self.cookie, self.url, BASE_LOG, "peers", queryString)
   debug (result)
 
 proc getDefaultSavePath*(self: Qb): JsonNode = 
@@ -299,14 +293,13 @@ proc getDefaultSavePath*(self: Qb): JsonNode =
 
 proc getSyncMainData*(self: Qb, lastrid = 0): JsonNode = 
   ## If no lastrid is provided, lastrid 0 will be assumed. If the given rid is different from the one of last server reply, full_update will be true.
-  #TODO Replace choice fields
   var queryString = "?rid="  & intToStr(lastrid)
-  result = getDataFromApiJSON(self.cookie, self.url, BASE_LOG, "maindata", queryString)
+  result = getDataFromApi(self.cookie, self.url, BASE_LOG, "maindata", queryString)
   debug (result)
 
 proc getGlobalTransferData*(self: Qb): JsonNode =
   ##Get global transfer info, like you usually see in the client's statusbar.
-  result = getDataFromApiJSON(self.cookie, self.url, BASE_TRANSFER, "info")
+  result = getDataFromApi(self.cookie, self.url, BASE_TRANSFER, "info")
   debug (result)
 
 proc isSpeedLimitMode*(self: Qb): JsonNode =
@@ -315,6 +308,7 @@ proc isSpeedLimitMode*(self: Qb): JsonNode =
   debug (result)
 
 proc toggleSpeedLimitMode*(self: Qb): JsonNode = 
+  ## Toggles the SpeedLimit switch, true = false and false = true
   result = getDataFromApi(self.cookie, self.url, BASE_TRANSFER, "toggleSpeedLimitsMode")
   debug(result)
 
@@ -326,7 +320,7 @@ proc getGlobalDownloadLimit*(self: var Qb): JsonNode =
 proc setGlobalDownloadLimit*(self: Qb, limit:int = 0): JsonNode = 
   ## Sets the global Download Limit. Please note that the `limit` must be in bytes/sec.
   var querystring = "?limit="  & intToStr(limit)
-  result = getDataFromApiJSON(self.cookie, self.url, BASE_LOG, "limit", querystring)
+  result = getDataFromApi(self.cookie, self.url, BASE_LOG, "limit", querystring)
   debug(result)
 
 proc getGlobalUploadLimit*(self: var Qb): JsonNode =
@@ -356,7 +350,7 @@ proc getTorrents*(self: Qb, filter="all", category="", sort="", reverse=false, l
   if hashes.len > 0:
     querystring = querystring & "&hashes=" & hashesToStr(hashes)
 
-  result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "info", queryString)
+  result = getDataFromApi(self.cookie, self.url, BASE_TORRENT, "info", queryString)
 
 proc getTorrentProperties*(self: Qb, hash:string): JsonNode =
   ## Returns the properties of the torrent provided via it's hash. You can get the torrent hash by calling getTorrents procedure.
@@ -364,7 +358,7 @@ proc getTorrentProperties*(self: Qb, hash:string): JsonNode =
     result = %*{"error": "No hash provided"}
   else:
     var querystring = "?hash=" & hash 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "properties", queryString)
+    result = getDataFromApi(self.cookie, self.url, BASE_TORRENT, "properties", queryString)
 
 proc getTorrentTrackers*(self: Qb, hash:string = ""): JsonNode =
   ## Returns tracker information of the torrent provided via it's hash. You can get the torrent hash by calling getTorrents procedure.
@@ -372,7 +366,7 @@ proc getTorrentTrackers*(self: Qb, hash:string = ""): JsonNode =
     result = %*{"error": "No hash provided"}
   else:
     var querystring = "?hash=" & hash 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "trackers", queryString)
+    result = getDataFromApi(self.cookie, self.url, BASE_TORRENT, "trackers", queryString)
   debug(result)
 
 proc getTorrentWebSeeds*(self: Qb, hash:string = ""): JsonNode =
@@ -381,7 +375,7 @@ proc getTorrentWebSeeds*(self: Qb, hash:string = ""): JsonNode =
     result = %*{"error": "No hash provided"}
   else:
     var querystring = "?hash=" & hash 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "webseeds", queryString)
+    result = getDataFromApi(self.cookie, self.url, BASE_TORRENT, "webseeds", queryString)
   debug(result)
 
 proc getTorrentPiecesState*(self: Qb, hash:string = ""): JsonNode =
@@ -393,7 +387,7 @@ proc getTorrentPiecesState*(self: Qb, hash:string = ""): JsonNode =
     result = %*{"error": "No hash provided"}
   else:
     var querystring = "?hash=" & hash 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "pieceStates", queryString)
+    result = getDataFromApi(self.cookie, self.url, BASE_TORRENT, "pieceStates", queryString)
   debug(result)
 
 proc getTorrentPiecesHashes*(self: Qb, hash:string = ""): JsonNode =
@@ -402,7 +396,7 @@ proc getTorrentPiecesHashes*(self: Qb, hash:string = ""): JsonNode =
     result = %*{"error": "No hash provided"}
   else:
     var querystring = "?hash=" & hash 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "pieceHashes", queryString)
+    result = getDataFromApi(self.cookie, self.url, BASE_TORRENT, "pieceHashes", queryString)
   debug(result)
 
 proc setTorrentsPaused*(self: Qb, hashes:seq[string]): JsonNode = 
@@ -413,7 +407,7 @@ proc setTorrentsPaused*(self: Qb, hashes:seq[string]): JsonNode =
   else:
     h = hashesToStr(hashes)
     var querystring = "?hashes=" & h 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "pause", queryString)
+    result = getDataFromApi(self.cookie, self.url, BASE_TORRENT, "pause", queryString)
   debug(result)
 
 proc setTorrentsResumed*(self: Qb, hashes:seq[string]): JsonNode = 
@@ -424,7 +418,7 @@ proc setTorrentsResumed*(self: Qb, hashes:seq[string]): JsonNode =
   else:
     h = hashesToStr(hashes)
     var querystring = "?hashes=" & h 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "resume", queryString)
+    result = getDataFromApi(self.cookie, self.url, BASE_TORRENT, "resume", queryString)
   debug(result)
 
 proc getTorrentFiles*(self: Qb, hash:string = ""): JsonNode =
@@ -433,7 +427,7 @@ proc getTorrentFiles*(self: Qb, hash:string = ""): JsonNode =
     result = %*{"error": "No hash provided"}
   else:
     var querystring = "?hash=" & hash 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "files", queryString)
+    result = getDataFromApi(self.cookie, self.url, BASE_TORRENT, "files", queryString)
   debug(result)
 
 proc deleteTorrents*(self: Qb, hashes:seq[string], deleteFiles=false): JsonNode =
@@ -444,7 +438,7 @@ proc deleteTorrents*(self: Qb, hashes:seq[string], deleteFiles=false): JsonNode 
   else:
     h = hashesToStr(hashes)
     var querystring = "?hashes=" & h & "&deleteFiles=" & boolToStr(deleteFiles)
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "delete", queryString)
+    result = getDataFromApi(self.cookie, self.url, BASE_TORRENT, "delete", queryString)
   debug(result)
 
 proc torrentsRecheck*(self: Qb, hashes:seq[string]): JsonNode = 
@@ -455,7 +449,7 @@ proc torrentsRecheck*(self: Qb, hashes:seq[string]): JsonNode =
   else:
     h = hashesToStr(hashes)
     var querystring = "?hashes=" & h 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "recheck", queryString)
+    result = getDataFromApi(self.cookie, self.url, BASE_TORRENT, "recheck", queryString)
   debug(result)
 
 proc torrentsIncreasePriority*(self: Qb, hashes:seq[string]): JsonNode = 
@@ -466,7 +460,7 @@ proc torrentsIncreasePriority*(self: Qb, hashes:seq[string]): JsonNode =
   else:
     h = hashesToStr(hashes)
     var querystring = "?hashes=" & h 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "increasePrio", queryString)
+    result = getDataFromApi(self.cookie, self.url, BASE_TORRENT, "increasePrio", queryString)
   debug(result)
 
 proc torrentsReannounce*(self: Qb, hashes:seq[string]): JsonNode = 
@@ -477,7 +471,7 @@ proc torrentsReannounce*(self: Qb, hashes:seq[string]): JsonNode =
   else:
     h = hashesToStr(hashes)
     var querystring = "?hashes=" & h 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "reannounce", queryString)
+    result = getDataFromApi(self.cookie, self.url, BASE_TORRENT, "reannounce", queryString)
   debug(result)
 
 proc banPeers*(self: Qb, peers:seq[string]): JsonNode =
@@ -487,7 +481,7 @@ proc banPeers*(self: Qb, peers:seq[string]): JsonNode =
   else:
     h = hashesToStr(peers)
     var querystring = "?peers=" & h 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "banPeers", queryString)
+    result = getDataFromApi(self.cookie, self.url, BASE_TORRENT, "banPeers", queryString)
   debug(result)
 
 proc deleteTorrents*(self: Qb, hashes:seq[string], delFiles = false): JsonNode =
@@ -500,7 +494,7 @@ proc deleteTorrents*(self: Qb, hashes:seq[string], delFiles = false): JsonNode =
     querystring = "?hashes=" & h 
     if delFiles:
       querystring &= "&deleteFiles=true"
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "delete", queryString)
+    result = getDataFromApi(self.cookie, self.url, BASE_TORRENT, "delete", queryString)
   debug(result)
 
 
