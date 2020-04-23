@@ -1,10 +1,9 @@
 # Package
 
-version       = "0.1.0"
+version       = "0.1.1"
 author        = "Faulander"
 description   = "A wrapper for the QBittorrent WebAPI"
 license       = "MIT"
-srcDir = "src"
 
 # Dependencies
 requires "nim >= 1.2.0"
