@@ -280,9 +280,9 @@ proc getMainLog*(self: Qb, normal = false, info = false, warning = true, critica
                       "critical": boolToStr(critical),
                       "last_known_id": intToStr(last_known_id)
                     })
-  querystring = "main?" & queryString 
+  querystring = "?" & queryString 
   #debug(querystring)
-  result = getDataFromApiJSON(self.cookie, self.url, BASE_LOG, queryString)
+  result = getDataFromApiJSON(self.cookie, self.url, BASE_LOG, "main", queryString)
   debug (result)
 
 proc getPeerLog*(self: Qb, last_known_id = -1): JsonNode =
@@ -363,16 +363,16 @@ proc getTorrentProperties*(self: Qb, hash:string): JsonNode =
   if hash == "":
     result = %*{"error": "No hash provided"}
   else:
-    var querystring = "properties?hash=" & hash 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, queryString)
+    var querystring = "?hash=" & hash 
+    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "properties", queryString)
 
 proc getTorrentTrackers*(self: Qb, hash:string = ""): JsonNode =
   ## Returns tracker information of the torrent provided via it's hash. You can get the torrent hash by calling getTorrents procedure.
   if hash == "":
     result = %*{"error": "No hash provided"}
   else:
-    var querystring = "trackers?hash=" & hash 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, queryString)
+    var querystring = "?hash=" & hash 
+    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "trackers", queryString)
   debug(result)
 
 proc getTorrentWebSeeds*(self: Qb, hash:string = ""): JsonNode =
@@ -380,8 +380,8 @@ proc getTorrentWebSeeds*(self: Qb, hash:string = ""): JsonNode =
   if hash == "":
     result = %*{"error": "No hash provided"}
   else:
-    var querystring = "webseeds?hash=" & hash 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, queryString)
+    var querystring = "?hash=" & hash 
+    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "webseeds", queryString)
   debug(result)
 
 proc getTorrentPiecesState*(self: Qb, hash:string = ""): JsonNode =
@@ -392,8 +392,8 @@ proc getTorrentPiecesState*(self: Qb, hash:string = ""): JsonNode =
   if hash == "":
     result = %*{"error": "No hash provided"}
   else:
-    var querystring = "pieceStates?hash=" & hash 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, queryString)
+    var querystring = "?hash=" & hash 
+    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "pieceStates", queryString)
   debug(result)
 
 proc getTorrentPiecesHashes*(self: Qb, hash:string = ""): JsonNode =
@@ -401,8 +401,8 @@ proc getTorrentPiecesHashes*(self: Qb, hash:string = ""): JsonNode =
   if hash == "":
     result = %*{"error": "No hash provided"}
   else:
-    var querystring = "pieceHashes?hash=" & hash 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, queryString)
+    var querystring = "?hash=" & hash 
+    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "pieceHashes", queryString)
   debug(result)
 
 proc setTorrentsPaused*(self: Qb, hashes:seq[string]): JsonNode = 
@@ -412,8 +412,8 @@ proc setTorrentsPaused*(self: Qb, hashes:seq[string]): JsonNode =
       result = %*{"error": "No hashes provided"}
   else:
     h = hashesToStr(hashes)
-    var querystring = "pause?hashes=" & h 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, queryString)
+    var querystring = "?hashes=" & h 
+    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "pause", queryString)
   debug(result)
 
 proc setTorrentsResumed*(self: Qb, hashes:seq[string]): JsonNode = 
@@ -423,8 +423,8 @@ proc setTorrentsResumed*(self: Qb, hashes:seq[string]): JsonNode =
       result = %*{"error": "No hashes provided"}
   else:
     h = hashesToStr(hashes)
-    var querystring = "resume?hashes=" & h 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, queryString)
+    var querystring = "?hashes=" & h 
+    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "resume", queryString)
   debug(result)
 
 proc getTorrentFiles*(self: Qb, hash:string = ""): JsonNode =
@@ -432,8 +432,8 @@ proc getTorrentFiles*(self: Qb, hash:string = ""): JsonNode =
   if hash == "":
     result = %*{"error": "No hash provided"}
   else:
-    var querystring = "files?hash=" & hash 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, queryString)
+    var querystring = "?hash=" & hash 
+    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "files", queryString)
   debug(result)
 
 proc deleteTorrents*(self: Qb, hashes:seq[string], deleteFiles=false): JsonNode =
@@ -443,8 +443,8 @@ proc deleteTorrents*(self: Qb, hashes:seq[string], deleteFiles=false): JsonNode 
       result = %*{"error": "No hashes provided"}
   else:
     h = hashesToStr(hashes)
-    var querystring = "delete?hashes=" & h & "&deleteFiles=" & boolToStr(deleteFiles)
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, queryString)
+    var querystring = "?hashes=" & h & "&deleteFiles=" & boolToStr(deleteFiles)
+    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "delete", queryString)
   debug(result)
 
 proc torrentsRecheck*(self: Qb, hashes:seq[string]): JsonNode = 
@@ -454,8 +454,8 @@ proc torrentsRecheck*(self: Qb, hashes:seq[string]): JsonNode =
       result = %*{"error": "No hashes provided"}
   else:
     h = hashesToStr(hashes)
-    var querystring = "recheck?hashes=" & h 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, queryString)
+    var querystring = "?hashes=" & h 
+    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "recheck", queryString)
   debug(result)
 
 proc torrentsIncreasePriority*(self: Qb, hashes:seq[string]): JsonNode = 
@@ -465,8 +465,8 @@ proc torrentsIncreasePriority*(self: Qb, hashes:seq[string]): JsonNode =
       result = %*{"error": "No hashes provided"}
   else:
     h = hashesToStr(hashes)
-    var querystring = "increasePrio?hashes=" & h 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, queryString)
+    var querystring = "?hashes=" & h 
+    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "increasePrio", queryString)
   debug(result)
 
 proc torrentsReannounce*(self: Qb, hashes:seq[string]): JsonNode = 
@@ -476,8 +476,8 @@ proc torrentsReannounce*(self: Qb, hashes:seq[string]): JsonNode =
       result = %*{"error": "No hashes provided"}
   else:
     h = hashesToStr(hashes)
-    var querystring = "reannounce?hashes=" & h 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, queryString)
+    var querystring = "?hashes=" & h 
+    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "reannounce", queryString)
   debug(result)
 
 proc banPeers*(self: Qb, peers:seq[string]): JsonNode =
@@ -486,8 +486,8 @@ proc banPeers*(self: Qb, peers:seq[string]): JsonNode =
       result = %*{"error": "No peers provided"}
   else:
     h = hashesToStr(peers)
-    var querystring = "banPeers?beers=" & h 
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, queryString)
+    var querystring = "?peers=" & h 
+    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "banPeers", queryString)
   debug(result)
 
 proc deleteTorrents*(self: Qb, hashes:seq[string], delFiles = false): JsonNode =
@@ -497,10 +497,10 @@ proc deleteTorrents*(self: Qb, hashes:seq[string], delFiles = false): JsonNode =
       result = %*{"error": "No hashes provided"}
   else:
     h = hashesToStr(hashes)
-    querystring = "delete?hashes=" & h 
+    querystring = "?hashes=" & h 
     if delFiles:
       querystring &= "&deleteFiles=true"
-    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, queryString)
+    result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "delete", queryString)
   debug(result)
 
 
