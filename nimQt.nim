@@ -154,14 +154,15 @@ type
 
   HttpHeaders* = ref object
     table*: TableRef[string, seq[string]]
-
+#[
 macro getFields(obj: typed): seq[string] =
   var fields: seq[string]
   for field in obj.getImpl[2][2]:
     fields.add $field[0]
   newLit fields
+]#
 
-var consoleLog = newConsoleLogger(fmtStr="[$datetime] - $levelname - ", levelThreshold=lvlDebug)
+var consoleLog = newConsoleLogger(fmtStr="[$datetime] - $levelname - ", levelThreshold=lvlError)
 addHandler(consoleLog)
 
 proc initQb*(url:string, username:string, password:string): Qb = 
