@@ -39,7 +39,7 @@ type
   Qb* = object
     cookie: string
     url: string
-    connected: bool 
+    connected*: bool 
     username: string
     password: string
     referer: string
@@ -485,22 +485,9 @@ proc banPeers*(self: Qb, peers:seq[string]): JsonNode =
     result = getDataFromApi(self.cookie, self.url, BASE_TORRENT, "banPeers", queryString)
   debug(result)
 
-proc deleteTorrents*(self: Qb, hashes:seq[string], delFiles = false): JsonNode =
-  var h:string
-  var querystring:string
-  if hashes.len == 0:
-      result = %*{"error": "No hashes provided"}
-  else:
-    h = hashesToStr(hashes)
-    querystring = "?hashes=" & h 
-    if delFiles:
-      querystring &= "&deleteFiles=true"
-    result = getDataFromApi(self.cookie, self.url, BASE_TORRENT, "delete", queryString)
-  debug(result)
-
 
 when isMainModule:
-  var conn = initQb("http://192.168.42.167:8080", "admin", "adminadmin")
+  var conn = initQb("http://localhost:8080", "admin", "adminadmin")
   discard conn.login()
   assert conn.connected == true
   echo conn.getTorrents()
