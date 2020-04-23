@@ -189,19 +189,19 @@ proc hashesToStr(hashes: seq[string]): string =
 template getData(): untyped =
   let client = newHttpClient()
   client.headers = newHttpHeaders({ "cookie": cookie })
-  let finalUrl = url & base & meth
+  let finalUrl = url & base & meth & querystring
   debug("Proc: getDataFromApi, URL: ", finalUrl, ", Method: ", meth)
   let response {.inject.} = client.request(finalUrl, httpMethod = postorget)
   
 
-proc getDataFromApi(cookie: string, url:string, base:string, meth:string, postorget = HttpGet): string =  
+proc getDataFromApi(cookie: string, url:string, base:string, meth:string, querystring = "", postorget = HttpGet): JsonNode =  
   getData()
   if response.status == "200 OK":
-    result = response.body
+    result = %*{meth: response.body}
   else:
-    result = "Error"
+    result = %*{"error": "Method " & meth & " failed."}
 
-proc getDataFromApiJSON(cookie: string, url:string, base:string, meth:string, postorget = HttpGet): JsonNode 
+proc getDataFromApiJSON(cookie: string, url:string, base:string, meth:string, querystring = "", postorget = HttpGet): JsonNode 
  =  
   getData()
   if response.status == "200 OK":
@@ -250,17 +250,13 @@ proc logout*(self: var Qb): bool =
 
 proc getVersion*(self: Qb): JsonNode = 
   ## returns the version of the QBittorrent client
-  var res = getDataFromApi(self.cookie, self.url, BASE_APP, "version")
-  var j = %*{"version": res}
-  debug (j)
-  result = j
+  result = getDataFromApi(self.cookie, self.url, BASE_APP, "version")
+  debug (result)
 
 proc getWebAPIVersion*(self: Qb): JsonNode = 
   ## returns the version of the QB API
-  var res = getDataFromApi(self.cookie, self.url, BASE_APP, "webapiVersion")
-  var j = %*{"webapiversion": res}
-  debug (j)
-  result = j
+  result = getDataFromApi(self.cookie, self.url, BASE_APP, "webapiVersion")
+  debug (result)
  
 proc getBuildInfo*(self: Qb): JsonNode = 
   ## Returns a JSON of the build information of QBittorrents libraries
@@ -292,28 +288,20 @@ proc getMainLog*(self: Qb, normal = false, info = false, warning = true, critica
 proc getPeerLog*(self: Qb, last_known_id = -1): JsonNode =
   ## Get's the peer logs from the current Qt instance. Timeframe can be set by filling the `last_known_id` with an integer field different than -1.
   #TODO Replace choice fields
-  var queryString = encodeQuery({
-                      "last_known_id": intToStr(last_known_id)
-                    })
-  querystring = "peers?" & queryString 
-  result = getDataFromApiJSON(self.cookie, self.url, BASE_LOG, queryString)
+  var queryString = "?last_known_id="  & intToStr(last_known_id)
+  result = getDataFromApiJSON(self.cookie, self.url, BASE_LOG, "peers", queryString)
   debug (result)
 
 proc getDefaultSavePath*(self: Qb): JsonNode = 
   ## Returns the default savepath of the Qbittorrent Instance.
-  var res = getDataFromApi(self.cookie, self.url, BASE_APP, "defaultSavePath")
-  var j = %*{"defaultsavepath": res}
-  debug (j)
-  result = j
+  result = getDataFromApi(self.cookie, self.url, BASE_APP, "defaultSavePath")
+  debug (result)
 
 proc getSyncMainData*(self: Qb, lastrid = 0): JsonNode = 
-  ## Response ID. If not provided, rid=0 will be assumed. If the given rid is different from the one of last server reply, full_update will be true.
+  ## If no lastrid is provided, lastrid 0 will be assumed. If the given rid is different from the one of last server reply, full_update will be true.
   #TODO Replace choice fields
-  var queryString = encodeQuery({
-                      "rid": intToStr(lastrid)
-                    })
-  querystring = "maindata?" & queryString 
-  result = getDataFromApiJSON(self.cookie, self.url, BASE_SYNC, queryString)
+  var queryString = "?rid="  & intToStr(lastrid)
+  result = getDataFromApiJSON(self.cookie, self.url, BASE_LOG, "maindata", queryString)
   debug (result)
 
 proc getGlobalTransferData*(self: Qb): JsonNode =
@@ -323,56 +311,38 @@ proc getGlobalTransferData*(self: Qb): JsonNode =
 
 proc isSpeedLimitMode*(self: Qb): JsonNode =
   ## Returns true if speedlimit mode is activated, otherwise it returns false.
-  var res = getDataFromApi(self.cookie, self.url, BASE_TRANSFER, "speedLimitsMode")
-  if res == "1": 
-      result = %*{"speedlimitmode": true}
-  else:
-      result = %*{"speedlimitmode": false}
+  result = getDataFromApi(self.cookie, self.url, BASE_TRANSFER, "speedLimitsMode")
   debug (result)
 
 proc toggleSpeedLimitMode*(self: Qb): JsonNode = 
-  var res = getDataFromApi(self.cookie, self.url, BASE_TRANSFER, "toggleSpeedLimitsMode")
-  if res != "Error":
-    result = %*{"toggled_speed_limit": true}
-  else:
-      result = %*{"toggled_speed_limit": false}
+  result = getDataFromApi(self.cookie, self.url, BASE_TRANSFER, "toggleSpeedLimitsMode")
   debug(result)
 
 proc getGlobalDownloadLimit*(self: var Qb): JsonNode =
   ## Gets the current global Download Limit. If 0 is returned, no download limit is set. Returns bytes/sec.
-  var res = getDataFromApi(self.cookie, self.url, BASE_TRANSFER, "downloadLimit")
-  result = %*{"globaldownloadlimit": res}
-  debug(result)
+  result = getDataFromApi(self.cookie, self.url, BASE_TRANSFER, "downloadLimit")
+  debug (result)
 
 proc setGlobalDownloadLimit*(self: Qb, limit:int = 0): JsonNode = 
   ## Sets the global Download Limit. Please note that the `limit` must be in bytes/sec.
-  var queryString = encodeQuery({
-                      "limit": intToStr(limit)
-                    })
-  querystring = "setDownloadLimit?" & queryString 
-  var res = getDataFromApi(self.cookie, self.url, BASE_TRANSFER, queryString)
-  result = %*{"setglobaldownloadlimit": res}
+  var querystring = "?limit="  & intToStr(limit)
+  result = getDataFromApiJSON(self.cookie, self.url, BASE_LOG, "limit", querystring)
   debug(result)
 
 proc getGlobalUploadLimit*(self: var Qb): JsonNode =
   ## Gets the current global Upload Limit. If 0 is returned, no download limit is set. Returns bytes/sec.
-  var res = getDataFromApi(self.cookie, self.url, BASE_TRANSFER, "uploadLimit")
-  result = %*{"globaluploadlimit": res}
+  result = getDataFromApi(self.cookie, self.url, BASE_TRANSFER, "uploadLimit")
   debug(result)
 
 proc setGlobalUploadLimit*(self: Qb, limit:int = 0): JsonNode = 
   ## Sets the global Download Limit. Please note that the `limit` must be in bytes/sec.
-  var queryString = encodeQuery({
-                      "limit": intToStr(limit)
-                    })
-  querystring = "setUploadLimit?" & queryString 
-  var res = getDataFromApi(self.cookie, self.url, BASE_TRANSFER, queryString)
-  result = %*{"setglobaluploadlimit": res}
+  var querystring = "?setUploadLimit=" & intToStr(limit)
+  result = getDataFromApi(self.cookie, self.url, BASE_TRANSFER, "limit", querystring)
   debug(result)
 
-proc getTorrents*(self: Qb, filter="all", category="", sort="", reverse=false, limit=0, offset=0, hashes:seq[string]): JsonNode =
+proc getTorrents*(self: Qb, filter="all", category="", sort="", reverse=false, limit=0, offset=0, hashes:seq[string] = @[]): JsonNode =
   ## Gets a list of Torrents
-  var querystring = "filter=" & filter
+  var querystring = "?filter=" & filter
   if category.len != 0:
     querystring = querystring & "&category=" & category
   if sort.len != 0:
@@ -386,8 +356,7 @@ proc getTorrents*(self: Qb, filter="all", category="", sort="", reverse=false, l
   if hashes.len > 0:
     querystring = querystring & "&hashes=" & hashesToStr(hashes)
 
-  querystring = "info?" & queryString 
-  result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, queryString)
+  result = getDataFromApiJSON(self.cookie, self.url, BASE_TORRENT, "info", queryString)
 
 proc getTorrentProperties*(self: Qb, hash:string): JsonNode =
   ## Returns the properties of the torrent provided via it's hash. You can get the torrent hash by calling getTorrents procedure.
@@ -539,5 +508,6 @@ when isMainModule:
   var conn = initQb("http://192.168.42.167:8080", "admin", "adminadmin")
   discard conn.login()
   assert conn.connected == true
+  echo conn.getTorrents()
   discard conn.logout()
   assert conn.connected == false
